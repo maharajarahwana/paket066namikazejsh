@@ -211,23 +211,60 @@ btn.style.borderColor = '#007bff';       // border ikut biru
   });
 
   // audio play once
-  function handleAudioButton(btn){
-    btn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      const src = btn.getAttribute('data-audio');
-      if(!src) return;
-      if(audioPlayed[src]){ alert('Audio hanya bisa diputar satu kali.'); return; }
-      if(playingAudio){ try{ playingAudio.pause(); }catch{} }
-      const aud = new Audio(ASSET_PATH + src);
-      playingAudio = aud;
-      aud.play().catch(()=>{ alert('Gagal memutar audio. Pastikan file ada.'); });
-      audioPlayed[src] = true;
-      btn.disabled = true;
-      btn.textContent = "Played";
-      aud.addEventListener('ended', ()=> { playingAudio = null; });
+function handleAudioButton(btn){
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+
+    // Jika ada audio yang sedang diputar
+    if (playingAudio && !playingAudio.paused && !playingAudio.ended) {
+      alert("Tunggu sampai audio yang sedang diputar selesai.");
+      return;
+    }
+
+    const src = btn.getAttribute('data-audio');
+    if(!src) return;
+
+    // Audio hanya boleh diputar sekali
+    if(audioPlayed[src]){
+      alert('Audio hanya bisa diputar satu kali.');
+      return;
+    }
+
+    const aud = new Audio(ASSET_PATH + src);
+    playingAudio = aud;
+
+    // Nonaktifkan semua tombol audio selama audio diputar
+    document.querySelectorAll('.audioPlayOnce').forEach(b=>{
+      b.disabled = true;
     });
-  }
-  document.querySelectorAll('.audioPlayOnce').forEach(handleAudioButton);
+
+    // Aktifkan kembali hanya tombol yang belum pernah diputar
+    aud.addEventListener('ended', ()=>{
+      playingAudio = null;
+      audioPlayed[src] = true;
+
+      btn.textContent = "Played";
+
+      document.querySelectorAll('.audioPlayOnce').forEach(b=>{
+        const s = b.getAttribute('data-audio');
+        if(audioPlayed[s]){
+          b.disabled = true;
+          b.textContent = "Played";
+        }else{
+          b.disabled = false;
+        }
+      });
+    });
+
+    aud.play().catch(()=>{
+      playingAudio = null;
+      document.querySelectorAll('.audioPlayOnce').forEach(b=>{
+        const s = b.getAttribute('data-audio');
+        if(!audioPlayed[s]) b.disabled = false;
+      });
+      alert('Gagal memutar audio.');
+    });
+  });
 }
 
 function showPage(i){
